@@ -20,3 +20,7 @@ function Book (title, author, numOfPages, status){
 
 const first = new Book("Journey to South", "Blama Doe", 23, "read completely");
 console.log(first.info())
+
+
+
+
