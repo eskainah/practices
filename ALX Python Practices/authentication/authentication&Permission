@@ -1,0 +1,67 @@
+models.py
+from django.db import models
+from django.contrib.auth.models import User
+
+class Post(models.Model):
+    title = models.CharField(max_length=100)
+    content = models.TextField()
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+serializers.py
+from rest_framework import serializers
+from .models import Post
+
+class PostSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Post
+        fields = ['id', 'title', 'content', 'author', 'created_at']
+permissions.py
+from rest_framework.permissions import BasePermission
+
+class IsAuthorOrReadOnly(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        if request.method in ['GET', 'HEAD', 'OPTIONS']:
+            return True
+        return obj.author == request.user
+views.py
+from rest_framework import generics
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.permissions import IsAuthenticated
+from .models import Post
+from .serializers import PostSerializer
+from .permissions import IsAuthorOrReadOnly
+
+class PostListCreateAPIView(generics.ListCreateAPIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated, IsAuthorOrReadOnly]
+    queryset = Post.objects.all()
+    serializer_class = PostSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
+
+class PostRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated, IsAuthorOrReadOnly]
+    queryset = Post.objects.all()
+    serializer_class = PostSerializer
+urls.py
+from django.urls import path
+from .views import PostListCreateAPIView, PostRetrieveUpdateDestroyAPIView
+
+urlpatterns = [
+    path('posts/', PostListCreateAPIView.as_view(), name='post-list-create'),
+    path('posts/<int:pk>/', PostRetrieveUpdateDestroyAPIView.as_view(), name='post-retrieve-update-destroy'),
+]
+
+
+###In this example, we have a Post model that 
+# represents a blog post, with a title, content, author, and created_at fields.
+
+The PostSerializer is responsible for serializing and deserializing the Post model instances.
+The IsAuthorOrReadOnly permission class is a custom permission that allows read-only access to anyone, 
+but only allows the author of the post to perform CRUD operations on it.
+The PostListCreateAPIView handles the list and create operations for the Post model. It requires token-based authentication (TokenAuthentication) and the IsAuthenticated and IsAuthorOrReadOnly permissions. When creating a new post, the perform_create method is overridden to associate the current user as the author of the post.
+The PostRetrieveUpdateDestroyAPIView handles the retrieve, update, and destroy operations for individual Post instances. It also requires token-based authentication and the IsAuthenticated and IsAuthorOrReadOnly permissions.
+In the urls.py file, we define the URL patterns for the two views, allowing clients to access the post list and individual post details.
+With this setup, only authenticated users can access the API, and the IsAuthorOrReadOnly permission ensures that users can only perform CRUD operations on posts they have authored. This provides a basic level of security and access control for the API.
