@@ -1,7 +1,7 @@
 
 
 function Greeting() {
-    return <h1>My First Paragraph.</h1>;
+    return <p>My First Paragraph.</p>;
 }
 
 export default Greeting;  // Default export
